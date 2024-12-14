@@ -19,10 +19,12 @@ function read_input()
     bots
 end
 
-function move(bots, seconds)
+height = 103
+width = 101
+function move(bots)
     for b in bots
-        b.x = mod(b.x + b.dx * seconds, 101)
-        b.y = mod(b.y + b.dy * seconds, 103)
+        b.x = mod(b.x + b.dx , width)
+        b.y = mod(b.y + b.dy , height)
     end
 end
 
@@ -34,7 +36,35 @@ function safety(bots)
     tl * tr * bl * br
 end
 
-bots = read_input()
-move(bots, 100)
+function distance(bots)
+    cx = ceil(sum(b -> b.x, bots) / length(bots))
+    cy = ceil(sum(b -> b.y, bots) / length(bots))
+    sum(b -> sqrt((b.x - cx)^2 + (b.y - cy)^2), bots) / length(bots)
+end
 
-print(safety(bots))
+function print_map(bots)
+    screen = fill(' ', (height, width))
+    for b in bots
+        if screen[b.y + 1, b.x + 1] == ' '
+            screen[b.y + 1, b.x + 1] = '*'
+        end
+    end 
+    for row in eachrow(screen)
+        println((join(row)))
+    end
+end
+
+bots = read_input()
+for i in 1:10000
+    move(bots)
+    d = distance(bots)
+    if i == 100
+        println("safety: ", safety(bots))
+    end
+    if d > 30
+        continue
+    end
+    println("time: $i $(d) =============================================================")
+    print_map(bots)
+end
+
