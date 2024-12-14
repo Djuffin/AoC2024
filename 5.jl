@@ -23,10 +23,16 @@ function read_updates()
     updates
 end
 
-function abide(rules_set, update)
-    for i in 1:length(update)
+rules = Set(read_rules())
+
+function before(a, b)
+    (a,b) in rules
+end
+
+function abide(update)
+    for i in eachindex(update)
         for j in (i+1):length(update)
-            if (update[j], update[i]) in rules_set
+            if before(update[j], update[i]) 
                 return false
             end
         end
@@ -34,8 +40,8 @@ function abide(rules_set, update)
     true
 end
 
-rules = Set(read_rules())
 updates = read_updates()
-updates = filter(u -> abide(rules, u), updates)
+updates = filter(u -> !abide(u), updates)
+updates = map(u -> sort(u, lt = before), updates)
 result = sum(u -> u[1 + div(length(u), 2)], updates)
 println(result)
