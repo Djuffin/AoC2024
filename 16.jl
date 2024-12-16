@@ -18,12 +18,13 @@ function read_map()
     m
 end
 
-mutable struct State
+struct State
     x::Int32
     y::Int32
     dx::Int32
     dy::Int32
     distance::Int32
+    parent::Any
 end
 
 Base.:(==)(p1::State, p2::State) = (p1.x == p2.x) && (p1.y == p2.y) && (p1.dx == p2.dx) && (p1.dy == p2.dy)
@@ -52,13 +53,13 @@ dir_to_sign = Dict(
 function get_next_states(s)
     states = []
 
+    push!(states, State(s.x + s.dx, s.y + s.dy, s.dx, s.dy, s.distance + 1, s))
+
     d = cw[(s.dx, s.dy)]
-    push!(states, State(s.x, s.y, d[1], d[2], s.distance + 1000))
+    push!(states, State(s.x, s.y, d[1], d[2], s.distance + 1000, s))
 
     d = ccw[(s.dx, s.dy)]
-    push!(states, State(s.x, s.y, d[1], d[2], s.distance + 1000))
-
-    push!(states, State(s.x + s.dx, s.y + s.dy, s.dx, s.dy, s.distance + 1))
+    push!(states, State(s.x, s.y, d[1], d[2], s.distance + 1000, s))
 
     states
 end
@@ -88,18 +89,14 @@ function search(m, start_state, ex, ey)
         end
 
         existing_distance = get!(visited_states, s, nothing)
-        if !isnothing(existing_distance) && existing_distance <= s.distance
+        if !isnothing(existing_distance) && existing_distance < s.distance
             continue
         end
 
-        if m[s.y, s.x] == '.'
-            m[s.y, s.x] = dir_to_sign[(s.dx, s.dy)]
-        end
         if s.x == ex && s.y == ey
             push!(solutions, s)
             if isnothing(best_distance) || best_distance > s.distance
                 best_distance = s.distance
-                #print_m(m)
             end
             continue
         end
@@ -109,14 +106,28 @@ function search(m, start_state, ex, ey)
         end
     end
 
-    return best_distance
+    filter!(s -> s.distance == best_distance, solutions)
+    locations = Set()
+    for s in solutions
+        l = s
+        while !isnothing(l)
+          push!(locations, (l.x, l.y))
+          l = l.parent
+        end
+    end
+    for l in locations
+        m[l[2], l[1]] = 'O'
+    end
+    print_m(m)
+
+    return (best_distance, length(locations))
 end
 
 function main()
     m = read_map()
     sy,sx = Tuple(findfirst(isequal('S'), m))
     ey,ex = Tuple(findfirst(isequal('E'), m))
-    start_state = State(sx, sy, 1, 0, 0)
+    start_state = State(sx, sy, 1, 0, 0, nothing)
     search(m,start_state, ex, ey)
 end
 
