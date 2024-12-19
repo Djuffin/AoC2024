@@ -36,37 +36,37 @@ function execute(a,b,c, instructions)
         values[o + 1]
     end
 
-    function adv(op)
+    function adv(op) # 0
         a = a >>> load_combo_op(op)
     end
 
-    function bxl(op)
+    function bxl(op) # 1
         b = xor(b, op)
     end
 
-    function bst(op)
-        b = load_combo_op(op) % 8
+    function bst(op) # 2
+        b = load_combo_op(op) & 7
     end
 
-    function jnz(op)
+    function jnz(op) # 3
         if a != 0
             ip = op - 2
         end
     end
 
-    function bxc(op)
+    function bxc(op) # 4
         b = xor(b, c)
     end
 
-    function out(op)
+    function out(op) # 5
         push!(output, load_combo_op(op) % 8)
     end
 
-    function bdv(op)
+    function bdv(op) # 6
         b = a >>> load_combo_op(op)
     end
 
-    function cdv(op)
+    function cdv(op) # 7
         c = a >>> load_combo_op(op)
     end
 
@@ -88,8 +88,66 @@ function execute(a,b,c, instructions)
         f(operand)
         ip += 2
     end
+
     output
 end
 
-output = execute(read_input()...)
-println(join(output, ','))
+function make_a(octets)
+    a = 0
+    for (i,v) in enumerate(reverse(octets))
+        a += v << (3 * (i - 1))
+    end
+    a
+end
+
+# Program: 2,4,  1,2,  7,5,  4,3,  0,3,  1,7,  5,5,  3,0
+# b = a % 8      -- 2,4
+# b = b xor 2    -- 1,2
+# c = a >> b     -- 7,5
+# b = b xor c    -- 4,3
+# a = a >> 3     -- 0,3
+# b = b xor 7    -- 1,7
+# out B          -- 5,5
+# jnz 0          -- 3,0
+
+function search(instructions)
+    octets = []
+    program = reverse(instructions)
+
+    function step(depth)
+        if length(octets) > 16
+            return nothing
+        end
+        for v in 0:7
+            push!(octets, v)
+            a = make_a(octets)
+
+            result = execute(a, 0, 0, instructions)
+            reverse!(result)
+            match_count = 0
+            for (x,y) in zip(program, result)
+                if x != y
+                    break
+                end
+                match_count += 1
+            end
+            if (match_count == 16)
+                return a
+            end
+            if match_count == depth
+                best_a = step(depth + 1)
+                if !isnothing(best_a)
+                    return best_a
+                end
+            end
+            pop!(octets)
+        end
+    end
+
+    step(1)
+end
+
+ins = read_input()[4]
+guessed_a = search(ins)
+println(guessed_a)
+println(execute(guessed_a, 0, 0, ins))
